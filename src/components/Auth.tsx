@@ -19,7 +19,7 @@ export function Auth() {
     signInWithPassword, 
     signUpWithPassword, 
     signInWithGoogle, 
-    signInWithFacebook,
+    // signInWithFacebook,
     signInWithPhone,
     verifyOtp
   } = useAuth();
@@ -136,28 +136,28 @@ export function Auth() {
     }
   };
 
-  const handleFacebookAuth = async () => {
-    setIsLoading(true);
-    try {
-      const { error } = await signInWithFacebook();
+  // const handleFacebookAuth = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     const { error } = await signInWithFacebook();
       
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message,
-        });
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Something went wrong. Please try again.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //     if (error) {
+  //       toast({
+  //         variant: "destructive",
+  //         title: "Error",
+  //         description: error.message,
+  //       });
+  //     }
+  //   } catch (error) {
+  //     toast({
+  //       variant: "destructive",
+  //       title: "Error",
+  //       description: "Something went wrong. Please try again.",
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   // OTP
 
@@ -319,7 +319,7 @@ export function Auth() {
                 Continue with Google
               </Button>
               
-              <Button 
+              {/* <Button 
                 variant="outline" 
                 className="w-full"
                 onClick={handleFacebookAuth}
@@ -332,7 +332,7 @@ export function Auth() {
                   />
                 </svg>
                 Continue with Facebook
-              </Button>
+              </Button> */}
             </TabsContent>
 
             <TabsContent value="signup" className="space-y-4 mt-6">
@@ -413,7 +413,7 @@ export function Auth() {
                 Sign up with Google
               </Button>
               
-              <Button 
+              {/* <Button 
                 variant="outline" 
                 className="w-full"
                 onClick={handleFacebookAuth}
@@ -426,7 +426,7 @@ export function Auth() {
                   />
                 </svg>
                 Sign up with Facebook
-              </Button>
+              </Button> */}
             </TabsContent>
 
             <TabsContent value="magic" className="space-y-4 mt-6">
@@ -494,7 +494,7 @@ export function Auth() {
                 Continue with Google
               </Button>
               
-              <Button 
+              {/* <Button 
                 variant="outline" 
                 className="w-full"
                 onClick={handleFacebookAuth}
@@ -507,7 +507,7 @@ export function Auth() {
                   />
                 </svg>
                 Continue with Facebook
-              </Button>
+              </Button> */}
             </TabsContent>
 
             {/* OTP */}
@@ -614,7 +614,7 @@ export function Auth() {
                 Continue with Google
               </Button>
               
-              <Button 
+              {/* <Button 
                 variant="outline" 
                 className="w-full"
                 onClick={handleFacebookAuth}
@@ -627,7 +627,7 @@ export function Auth() {
                   />
                 </svg>
                 Continue with Facebook
-              </Button>
+              </Button> */}
             </TabsContent>
 
           </Tabs>
