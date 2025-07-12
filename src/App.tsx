@@ -2,11 +2,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
 import { Auth } from "./components/Auth";
+import { useEffect } from "react";
+import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
@@ -14,18 +16,60 @@ const queryClient = new QueryClient();
 // Create an auth wrapper component
 function AuthRoute({ children }: { children: JSX.Element }) {
   const { session, loading } = useAuth();
+  const navigate = useNavigate();
 
-  if (loading) return <div>Loading...</div>;
-  
-  // If session exists and user is verified, show protected content
-  if (session) {
-    // Additional check for phone verification if needed
-    return children;
+  useEffect(() => {
+    if (!loading && session) {
+      navigate('/', { replace: true });
+    }
+  }, [session, loading, navigate]);
+
+  if (loading) {
+    return <div>Loading...</div>;
   }
-  
-  // Otherwise redirect to auth page
-  return <Navigate to="/auth" replace />;
+
+  if (!session) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return children;
 }
+
+
+function PublicRoute({ children }: { children: JSX.Element }) {
+  const { session, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && session) {
+      navigate('/', { replace: true });
+    }
+  }, [session, loading, navigate]);
+
+
+  useEffect(() => {
+  const checkSession = async () => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    console.log('Auth component session check:', currentSession);
+    if (currentSession) {
+      window.location.href = '/';
+    }
+  };
+
+  checkSession();
+}, []);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (session) {
+    return null; // The useEffect will handle the redirect
+  }
+
+  return children;
+}
+
 
 
 
@@ -37,10 +81,7 @@ function App() {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public routes */}
             <Route path="/auth" element={<Auth />} />
-            
-            {/* Protected routes */}
             <Route
               path="/"
               element={
@@ -49,8 +90,6 @@ function App() {
                 </AuthRoute>
               }
             />
-            
-            {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

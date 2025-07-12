@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Mail, ShoppingBag, User, Lock, Phone } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 
 export function Auth() {
@@ -74,30 +75,34 @@ export function Auth() {
     }
   };
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  
 
-    try {
-      const { error } = await signInWithPassword(email, password);
-      
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message,
-        });
-      }
-    } catch (error) {
+  const handleSignIn = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+
+  try {
+    const { error } = await signInWithPassword(email, password);
+    
+    if (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: error.message,
       });
-    } finally {
-      setIsLoading(false);
+    } else {
+      window.location.href = '/';
     }
-  };
+  } catch (error) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Something went wrong. Please try again.",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
    const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,7 +206,6 @@ const handleOtpSubmit = async (e: React.FormEvent) => {
   setIsLoading(true);
 
   try {
-    // Normalize phone number format consistently
     const normalizedPhone = phone.replace(/\D/g, '');
     const { error } = await verifyOtp(`+${normalizedPhone}`, otp);
     
@@ -212,11 +216,8 @@ const handleOtpSubmit = async (e: React.FormEvent) => {
         description: error.message || "Invalid or expired code. Please try again.",
       });
     } else {
-      toast({
-        title: "Verified!",
-        description: "Phone number successfully verified.",
-      });
-      navigate('/'); // This will redirect to the homepage
+      // Force a full page reload
+      window.location.href = '/';
     }
   } catch (error) {
     toast({
@@ -228,6 +229,13 @@ const handleOtpSubmit = async (e: React.FormEvent) => {
     setIsLoading(false);
   }
 };
+
+useEffect(() => {
+  return () => {
+    // Cleanup any pending timeouts or intervals
+    window.history.replaceState(null, '', window.location.pathname);
+  };
+}, []);
 
 
   return (

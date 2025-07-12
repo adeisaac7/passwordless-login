@@ -6,28 +6,39 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  
   const [isSigningUp, setIsSigningUp] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    let mounted = true;
 
-        if (!isSigningUp) {
-          setSession(session);
-          setUser(session?.user ?? null);
-        }
-        setLoading(false);
-      }
-    );
-
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, [isSigningUp]);
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+        
+         console.log('Auth state changed:', event, 'Session:', session);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription?.unsubscribe();
+    };
+  }, []);
+
+
 
   const signInWithEmail = async (email: string) => {
     const redirectUrl = `${window.location.origin}/auth`;
@@ -38,10 +49,14 @@ export function useAuth() {
     return { error };
   };
 
-  const signInWithPassword = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+ const signInWithPassword = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ 
+      email, 
+      password 
+    });
+    return { data, error };
   };
+  
 
   const signUpWithPassword = async (email: string, password: string) => {
     setIsSigningUp(true);
@@ -111,6 +126,9 @@ export function useAuth() {
     signInWithGoogle,
     signInWithPhone,
     verifyOtp,
-    signOut
+    signOut,
+    isSignedIn: !!session
+
   };
 }
+
