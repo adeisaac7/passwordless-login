@@ -38,39 +38,17 @@ function AuthRoute({ children }: { children: JSX.Element }) {
 
 function PublicRoute({ children }: { children: JSX.Element }) {
   const { session, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && session) {
-      navigate('/', { replace: true });
-    }
-  }, [session, loading, navigate]);
-
-
-  useEffect(() => {
-  const checkSession = async () => {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-    console.log('Auth component session check:', currentSession);
-    if (currentSession) {
-      window.location.href = '/';
-    }
-  };
-
-  checkSession();
-}, []);
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
   if (session) {
-    return null; // The useEffect will handle the redirect
+    return <Navigate to="/" replace />;
   }
 
   return children;
 }
-
-
 
 
 function App() {
