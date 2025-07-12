@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   onCartOpen: () => void;
@@ -17,8 +19,27 @@ interface HeaderProps {
 export function Header({ onCartOpen }: HeaderProps) {
   const { user, signOut } = useAuth();
   const { cartItems } = useCart();
+  const {toast} = useToast();
+  const navigate = useNavigate();
 
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out",
+      });
+      navigate('/auth');
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error signing out",
+        description: "There was an error signing out. Please try again.",
+      });
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

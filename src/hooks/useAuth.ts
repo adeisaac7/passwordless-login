@@ -56,7 +56,7 @@ export function useAuth() {
     });
     return { data, error };
   };
-  
+
 
   const signUpWithPassword = async (email: string, password: string) => {
     setIsSigningUp(true);
@@ -107,14 +107,16 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      window.location.href = '/auth';
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    // Force a full page reload to clear all state
+    window.location.href = '/auth';
+  } catch (error) {
+    console.error('Error signing out:', error);
+    throw error; // Re-throw to handle in the component if needed
+  }
+};
 
   return {
     user,
