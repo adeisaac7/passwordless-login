@@ -106,18 +106,20 @@ export function useAuth() {
     }
   };
 
-  const signOut = async () => {
+ const signOut = async () => {
   try {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
-    // Force a full page reload to clear all state
+    // Clear any local state if needed
+    setSession(null);
+    setUser(null);
+    // Always use window.location for redirect after signout
     window.location.href = '/auth';
   } catch (error) {
     console.error('Error signing out:', error);
-    throw error; // Re-throw to handle in the component if needed
+    throw error;
   }
 };
-
   return {
     user,
     session,

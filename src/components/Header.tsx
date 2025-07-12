@@ -24,22 +24,18 @@ export function Header({ onCartOpen }: HeaderProps) {
 
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Signed out successfully",
-        description: "You have been signed out",
-      });
-      navigate('/auth');
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error signing out",
-        description: "There was an error signing out. Please try again.",
-      });
-    }
-  };
+ const handleSignOut = async () => {
+  try {
+    await signOut(); // Let the signOut function handle everything
+    // No need for additional navigation here
+  } catch (error) {
+    toast({
+      variant: "destructive",
+      title: "Error signing out",
+      description: "There was an error signing out. Please try again.",
+    });
+  }
+};
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -81,7 +77,7 @@ export function Header({ onCartOpen }: HeaderProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={signOut}>
+              <DropdownMenuItem onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
               </DropdownMenuItem>
