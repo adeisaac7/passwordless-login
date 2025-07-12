@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -7,23 +7,41 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, ShoppingBag, User, Lock, Phone } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useNavigate } from 'react-router-dom';
+
 
 export function Auth() {
+
+  const [activeTab, setActiveTab] = useState('signin'); 
+  const [justSignedUp, setJustSignedUp] = useState(false); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);const [phone, setPhone] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
+  const navigate = useNavigate();
   const { 
     signInWithEmail, 
     signInWithPassword, 
     signUpWithPassword, 
     signInWithGoogle, 
-    // signInWithFacebook,
     signInWithPhone,
-    verifyOtp
+    verifyOtp,
+    session
   } = useAuth();
   const { toast } = useToast();
+
+
+ useEffect(() => {
+    // This ensures we stay on the auth page even if there's a session
+    if (activeTab === 'phone' && justSignedUp) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [activeTab, justSignedUp]);
+
+
+
 
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,37 +99,44 @@ export function Auth() {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
+   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       const { error } = await signUpWithPassword(email, password);
-      
       if (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message,
-        });
+        toast({ variant: "destructive", title: "Error", description: error.message });
       } else {
-        toast({
-          title: "Check your email!",
-          description: "We've sent you a confirmation link to complete your registration.",
-        });
         setEmail('');
         setPassword('');
+        setActiveTab('phone');
+        setJustSignedUp(true);
+        toast({
+          title: "Account created!",
+          description: "Please verify your phone number.",
+        });
+        window.history.replaceState(null, '', '/auth');
       }
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Something went wrong. Please try again.",
-      });
+      toast({ variant: "destructive", title: "Error", description: "Something went wrong." });
     } finally {
       setIsLoading(false);
     }
   };
+
+
+// Add this useEffect to handle any session changes
+useEffect(() => {
+  const handleRouteChange = () => {
+    if (justSignedUp && window.location.pathname !== '/auth') {
+      window.history.pushState(null, '', '/auth');
+    }
+  };
+
+  window.addEventListener('popstate', handleRouteChange);
+  return () => window.removeEventListener('popstate', handleRouteChange);
+}, [justSignedUp]);
+
 
   const handleGoogleAuth = async () => {
     setIsLoading(true);
@@ -136,86 +161,73 @@ export function Auth() {
     }
   };
 
-  // const handleFacebookAuth = async () => {
-  //   setIsLoading(true);
-  //   try {
-  //     const { error } = await signInWithFacebook();
-      
-  //     if (error) {
-  //       toast({
-  //         variant: "destructive",
-  //         title: "Error",
-  //         description: error.message,
-  //       });
-  //     }
-  //   } catch (error) {
-  //     toast({
-  //       variant: "destructive",
-  //       title: "Error",
-  //       description: "Something went wrong. Please try again.",
-  //     });
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
+  
+  
+const handlePhoneSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-  // OTP
-
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const { error } = await signInWithPhone(phone);
-      
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message,
-        });
-      } else {
-        toast({
-          title: "OTP Sent!",
-          description: "We've sent a verification code to your phone.",
-        });
-        setIsOtpSent(true);
-      }
-    } catch (error) {
+  try {
+    // Normalize phone number format (remove all non-digit characters)
+    const normalizedPhone = phone.replace(/\D/g, '');
+    const { error } = await signInWithPhone(`+${normalizedPhone}`);
+    
+    if (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Something went wrong. Please try again.",
+        title: "Error sending OTP",
+        description: error.message,
       });
-    } finally {
-      setIsLoading(false);
+    } else {
+      toast({
+        title: "OTP Sent!",
+        description: "We've sent a 6-digit code to your phone.",
+      });
+      setIsOtpSent(true);
     }
-  };
+  } catch (error) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to send OTP. Please try again.",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-  const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+const handleOtpSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      const { error } = await verifyOtp(phone, otp);
-      
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message,
-        });
-      }
-    } catch (error) {
+  try {
+    // Normalize phone number format consistently
+    const normalizedPhone = phone.replace(/\D/g, '');
+    const { error } = await verifyOtp(`+${normalizedPhone}`, otp);
+    
+    if (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Something went wrong. Please try again.",
+        title: "Verification Failed",
+        description: error.message || "Invalid or expired code. Please try again.",
       });
-    } finally {
-      setIsLoading(false);
+    } else {
+      toast({
+        title: "Verified!",
+        description: "Phone number successfully verified.",
+      });
+      navigate('/'); // This will redirect to the homepage
     }
-  };
+  } catch (error) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Verification failed. Please try again.",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
 
   return (
@@ -233,7 +245,15 @@ export function Auth() {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
+          <Tabs 
+          defaultValue="signin"  
+          value={activeTab}
+            onValueChange={(value) => {
+              setActiveTab(value);
+              setJustSignedUp(false); 
+            }}           
+            className="w-full"
+          >
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -319,21 +339,7 @@ export function Auth() {
                 Continue with Google
               </Button>
               
-              {/* <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={handleFacebookAuth}
-                disabled={isLoading}
-              >
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                  <path
-                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-                    fill="#1877F2"
-                  />
-                </svg>
-                Continue with Facebook
-              </Button> */}
-            </TabsContent>
+                </TabsContent>
 
             <TabsContent value="signup" className="space-y-4 mt-6">
               <form onSubmit={handleSignUp} className="space-y-4">
@@ -413,21 +419,7 @@ export function Auth() {
                 Sign up with Google
               </Button>
               
-              {/* <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={handleFacebookAuth}
-                disabled={isLoading}
-              >
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                  <path
-                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-                    fill="#1877F2"
-                  />
-                </svg>
-                Sign up with Facebook
-              </Button> */}
-            </TabsContent>
+              </TabsContent>
 
             <TabsContent value="magic" className="space-y-4 mt-6">
               <form onSubmit={handleMagicLink} className="space-y-4">
@@ -494,25 +486,18 @@ export function Auth() {
                 Continue with Google
               </Button>
               
-              {/* <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={handleFacebookAuth}
-                disabled={isLoading}
-              >
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                  <path
-                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-                    fill="#1877F2"
-                  />
-                </svg>
-                Continue with Facebook
-              </Button> */}
             </TabsContent>
+{/* Phone Tab Content */}
+            <TabsContent value="phone" className="space-y-4 mt-6">
+              {justSignedUp && (
+                <div className="bg-primary/10 p-3 rounded-md mb-4">
+                  <p className="text-sm text-primary">
+                    <User className="inline mr-2 h-4 w-4" />
+                    Almost done! Verify your phone to complete registration.
+                  </p>
+                </div>
+              )}
 
-            {/* OTP */}
-
-                        <TabsContent value="phone" className="space-y-4 mt-6">
               {!isOtpSent ? (
                 <form onSubmit={handlePhoneSubmit} className="space-y-4">
                   <div className="space-y-2">
@@ -531,15 +516,31 @@ export function Auth() {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       We'll send you a one-time verification code.
+                      {justSignedUp && " This helps secure your new account."}
                     </p>
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Sending...' : 'Send Verification Code'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      type="submit" 
+                      className="w-full"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Sending...' : 'Send Code'}
+                    </Button>
+                    {justSignedUp && (
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => {
+                          setActiveTab('signin');
+                          setJustSignedUp(false);
+                        }}
+                        disabled={isLoading}
+                      >
+                        Skip for Now
+                      </Button>
+                    )}
+                  </div>
                 </form>
               ) : (
                 <form onSubmit={handleOtpSubmit} className="space-y-4">
@@ -614,20 +615,6 @@ export function Auth() {
                 Continue with Google
               </Button>
               
-              {/* <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={handleFacebookAuth}
-                disabled={isLoading}
-              >
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                  <path
-                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-                    fill="#1877F2"
-                  />
-                </svg>
-                Continue with Facebook
-              </Button> */}
             </TabsContent>
 
           </Tabs>
