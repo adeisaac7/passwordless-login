@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,62 @@ import { supabase } from '@/integrations/supabase/client';
 
 
 export function Auth() {
+
+const OtpInput = ({ 
+  value, 
+  onChange,
+  length = 6 
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  length?: number;
+}) => {
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const newValue = e.target.value.replace(/\D/g, '');
+    if (newValue.length > 1) return;
+    
+    const newOtp = value.split('');
+    newOtp[index] = newValue;
+    onChange(newOtp.join(''));
+
+    // Auto focus to next input
+    if (newValue && index < length - 1 && inputRefs.current[index + 1]) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Backspace' && !value[index] && index > 0 && inputRefs.current[index - 1]) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+
+   return (
+    <div className="flex justify-center space-x-2">
+      {Array.from({ length }).map((_, index) => (
+        <input
+          key={index}
+          type="text"
+          maxLength={1}
+          value={value[index] || ''}
+          onChange={(e) => handleChange(e, index)}
+          onKeyDown={(e) => handleKeyDown(e, index)}
+          ref={(el) => (inputRefs.current[index] = el)}
+          className="w-12 h-12 text-center text-xl border-2 border-gray-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+          inputMode="numeric"
+          pattern="[0-9]*"
+        />
+      ))}
+    </div>
+  );
+};
+
+
+
+
 
   const [activeTab, setActiveTab] = useState('signin'); 
   const [justSignedUp, setJustSignedUp] = useState(false); 
@@ -75,7 +131,7 @@ export function Auth() {
     }
   };
 
-  
+
 
   const handleSignIn = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -527,7 +583,6 @@ useEffect(() => {
                       {justSignedUp && " This helps secure your new account."}
                     </p>
                   </div>
-                  <div className="flex gap-2">
                     <Button 
                       type="submit" 
                       className="w-full"
@@ -535,41 +590,23 @@ useEffect(() => {
                     >
                       {isLoading ? 'Sending...' : 'Send Code'}
                     </Button>
-                    {justSignedUp && (
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={() => {
-                          setActiveTab('signin');
-                          setJustSignedUp(false);
-                        }}
-                        disabled={isLoading}
-                      >
-                        Skip for Now
-                      </Button>
-                    )}
-                  </div>
                 </form>
               ) : (
-                <form onSubmit={handleOtpSubmit} className="space-y-4">
+                <form onSubmit={handleOtpSubmit} className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="otp">Verification Code</Label>
-                    <Input
-                      id="otp"
-                      type="text"
-                      placeholder="Enter 6-digit code"
+                    <OtpInput
                       value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      required
+                      onChange={(value) => setOtp(value)}
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground text-center mt-2">
                       Enter the code sent to {phone}
                     </p>
                   </div>
                   <Button 
                     type="submit" 
                     className="w-full"
-                    disabled={isLoading}
+                    disabled={isLoading || otp.length !== 6}
                   >
                     {isLoading ? 'Verifying...' : 'Verify Code'}
                   </Button>
