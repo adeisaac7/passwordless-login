@@ -49,30 +49,12 @@ export function useAuth() {
     return { error };
   };
 
- const signInWithPassword = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ 
-      email, 
-      password 
-    });
-    return { data, error };
-  };
-
-
-  const signUpWithPassword = async (email: string, password: string) => {
-    setIsSigningUp(true);
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth?signup=true`
-        }
-      });
-      return { error };
-    } finally {
-      setIsSigningUp(false);
-    }
-  };
+const signInWithPassword = async (email: string, password: string) => {
+  return await supabase.auth.signInWithPassword({ 
+    email, 
+    password 
+  });
+};
 
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -82,56 +64,107 @@ export function useAuth() {
     return { error };
   };
 
-  const signInWithPhone = async (phone: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone,
-        options: { 
-          shouldCreateUser: true,
-          channel: 'sms'
-        }
-      });
-      return { error };
-    } catch (error) {
-      return { error: error as Error };
-    }
-  };
+const checkFullVerification = async (userId: string) => {
+  const { data } = await supabase
+    .from('user_verifications')
+    .select('phone_verified')
+    .eq('user_id', userId)
+    .single();
 
-  const verifyOtp = async (phone: string, token: string) => {
-    try {
-      const { error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
-      return { error };
-    } catch (error) {
-      return { error: error as Error };
-    }
-  };
+  return data?.phone_verified || false;
+};
 
- const signOut = async () => {
+// Add this new function to useAuth.ts
+const verifyUserPhone = async (userId: string, inputPhone: string) => {
   try {
-    const { error } = await supabase.auth.signOut();
+    // Normalize both phone numbers for comparison
+    const normalizePhone = (num: string) => num.replace(/\D/g, '').replace(/^\+?/, '');
+
+    // Get user's stored phone number
+    const { data, error } = await supabase
+      .from('user_verifications')
+      .select('phone_number')
+      .eq('user_id', userId)
+      .single();
+
     if (error) throw error;
-    // Clear any local state if needed
-    setSession(null);
-    setUser(null);
-    // Always use window.location for redirect after signout
-    window.location.href = '/auth';
+    if (!data) throw new Error('User verification record not found');
+
+    return normalizePhone(data.phone_number) === normalizePhone(inputPhone);
   } catch (error) {
-    console.error('Error signing out:', error);
-    throw error;
+    console.error('Phone verification error:', error);
+    return false;
   }
 };
+
+// Add these new methods to your useAuth.ts
+
+const sendOtp = async (phone: string) => {
+  try {
+    const { error } = await supabase.auth.signInWithOtp({
+      phone,
+      options: {
+        shouldCreateUser: false, // Important for sign-in flow
+        channel: 'sms'
+      }
+    });
+    return { error };
+  } catch (error) {
+    return { error: error as Error };
+  }
+};
+
+const verifyPhoneOtp = async (phone: string, token: string) => {
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      phone,
+      token,
+      type: 'sms'
+    });
+    
+    if (data?.user?.id) {
+      // Update verification status in your database
+      await supabase
+        .from('user_verifications')
+        .upsert({
+          user_id: data.user.id,
+          phone_number: phone,
+          phone_verified: true
+        });
+    }
+    
+    return { data, error };
+  } catch (error) {
+    return { error: error as Error };
+  }
+};
+
+const checkPhoneVerification = async (userId: string) => {
+  const { data } = await supabase
+    .from('user_verifications')
+    .select('phone_verified')
+    .eq('user_id', userId)
+    .single();
+
+  return data?.phone_verified || false;
+};
+
+
+
   return {
     user,
     session,
     loading,
     signInWithEmail,
     signInWithPassword,
-    signUpWithPassword,
     signInWithGoogle,
-    signInWithPhone,
-    verifyOtp,
-    signOut,
-    isSignedIn: !!session
+    isSignedIn: !!session,
+    checkFullVerification,
+    verifyUserPhone,
+
+    sendOtp,
+    verifyPhoneOtp,
+    checkPhoneVerification,
 
   };
 }

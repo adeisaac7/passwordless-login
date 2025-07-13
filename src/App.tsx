@@ -13,24 +13,24 @@ import { supabase } from "./integrations/supabase/client";
 const queryClient = new QueryClient();
 
 
-// Create an auth wrapper component
 function AuthRoute({ children }: { children: JSX.Element }) {
-  const { session, loading } = useAuth();
+  const { session, loading, checkFullVerification } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && session) {
-      navigate('/', { replace: true });
+      const checkVerification = async () => {
+        const isVerified = await checkFullVerification(session.user.id);
+        if (!isVerified) {
+          navigate('/auth', { replace: true });
+        }
+      };
+      checkVerification();
     }
   }, [session, loading, navigate]);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!session) {
-    return <Navigate to="/auth" replace />;
-  }
+  if (loading) return <div>Loading...</div>;
+  if (!session) return <Navigate to="/auth" replace />;
 
   return children;
 }
